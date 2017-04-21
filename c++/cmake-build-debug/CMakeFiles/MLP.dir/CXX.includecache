@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/piotrek/ClionProjects/MLP/main.cpp
+iostream
+-
+vector
+-
+stdlib.h
+-
+random
+-
+math.h
+-
+algorithm
+-
+

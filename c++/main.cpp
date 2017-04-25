@@ -209,7 +209,7 @@ int main() {
             eta += eta_jump;
         }
         beta += beta_jump;
-        std::cout << "beta index: " << beta_ind + 1;
+        std::cout << "beta index: " << beta_ind + 1 << std::endl;
     }
 
     print_matrix(epoch_needed, beta_els, eta_els);

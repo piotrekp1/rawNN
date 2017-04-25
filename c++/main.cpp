@@ -39,6 +39,7 @@ std::vector<double> multiply_by(const std::vector<double>& a, double multiplier)
     return res;
 }
 
+
 class NN{
     std::vector<double> weights_1;
     std::vector<double> biases_1;
@@ -46,19 +47,26 @@ class NN{
     double bias_2;
 
     int n;
-    double static beta;
+    double beta;
     double eta;
 
-    double static activation_function(double arg){
+    double activation_function(double arg){
         return 1/(1 + exp(-arg * beta));
+    }
+
+    std::vector<double> activate(std::vector<double> args){
+        std::vector<double> res;
+        for(auto it = args.begin(); it != args.end(); ++it){
+            res.push_back(activation_function(*it));
+        }
+        return res;
     }
 
     std::vector<double> first_layer_result(int argument){
         std::vector<double> first_layer_arg = multiply_by(weights_1, argument);
-        std::vector<double> first_layer_res((unsigned long) n);
+        first_layer_arg = first_layer_arg + biases_1;
         // launch activation function
-        std::transform(first_layer_arg.begin(), first_layer_arg.end(), first_layer_res.begin(), activation_function);
-        return first_layer_res;
+        return activate(first_layer_arg);
     }
 
     double second_layer_result(const std::vector<double>& first_layer_result){
@@ -69,7 +77,7 @@ class NN{
     }
 
 public:
-    NN(int n, double eta): n(n), eta(eta){
+    NN(int n, double beta, double eta): n(n), eta(eta), beta(beta) {
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
         std::mt19937 gen(rd());
         std::uniform_real_distribution<double > dis(0,1);
@@ -86,7 +94,7 @@ public:
         return second_layer_result(fst);
     }
 
-    double delta_0(double output, double exp_result){
+    double delta_0(double exp_result, double output){
         return beta * (exp_result - output) * output * (1 - output);
     }
 
@@ -112,8 +120,8 @@ public:
          * w - weights in first layer
          */
 
-        double v0_plus = delta_0(output, exp_result) * eta;
-        std::vector<double> v_plus = multiply_by(fst, delta_0(output,exp_result) * eta);
+        double v0_plus = delta_0(exp_result, output) * eta;
+        std::vector<double> v_plus = multiply_by(fst, delta_0(exp_result, output) * eta);
         std::vector<double> u_plus = multiply_by(delta_h(exp_result, output, fst), eta);
         std::vector<double> w_plus = multiply_by(u_plus, input);
 
@@ -145,15 +153,14 @@ double sup_error(NN& network){
     return max_error;
 }
 
-int train_network(int timeout_epochs, double eta){
-    NN network(8, eta);
+int train_network(int timeout_epochs, double beta, double eta){
+    NN network(8, beta, eta);
     for(int i = 0; i < timeout_epochs; ++i){
         for(int j = 0; j < 4; ++j){
             network.learn(j, f(j));
         }
-        if(i % 30000 == 0){ print_results(network);}
 
-        if(i % 2000 == 0 && sup_error(network) < 0.001){
+        if(i % 1000 == 0 && sup_error(network) < 0.001){
             return i;
         }
     }
@@ -161,10 +168,50 @@ int train_network(int timeout_epochs, double eta){
 
 }
 
-//double NN::beta = 2.65;
-double NN::beta = 2.65;
+
+double exp_epochs(double beta, double eta, int tries){
+    long long unsigned sum = 0; // numerically bad if tries is big
+    for(int i = 0; i < tries; ++i){
+        sum += train_network(4000000, beta, eta);
+    }
+    return sum / tries;
+}
+
+template <size_t rows, size_t cols>
+void print_matrix(double (&matrix)[rows][cols], int y_length, int x_length){
+    for(int y = 0; y < y_length; ++y){
+        for(int x = 0; x < x_length; ++x){
+            std::cout << " " << matrix[y][x];
+        }
+        std::cout << std::endl;
+    }
+}
 
 int main() {
-    std::cout << "wynik: " << train_network(4000000, 1.11) << std::endl;
+    const int beta_els = 5;
+    const int eta_els = 5;
+
+    double epoch_needed[beta_els][eta_els];
+
+    double starting_beta = 2.70;
+    double beta;
+    double beta_jump = 0.03;
+
+    double starting_eta = 1.02;
+    double eta;
+    double eta_jump = 0.02;
+
+    beta = starting_beta;
+    for (int beta_ind = 0; beta_ind < beta_els; ++beta_ind){
+        eta = starting_eta;
+        for (int eta_ind = 0; eta_ind < eta_els; ++eta_ind){
+            epoch_needed[beta_ind][eta_ind] = exp_epochs(beta, eta, 3);
+            eta += eta_jump;
+        }
+        beta += beta_jump;
+        std::cout << "beta index: " << beta_ind + 1;
+    }
+
+    print_matrix(epoch_needed, beta_els, eta_els);
     return 0;
 }
